@@ -171,13 +171,7 @@ app.post('/api/events', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'endUTC must be after startUTC' })
   }
 
-  console.info('[api/events][POST] create attempt', {
-    userId: req.user?.id ?? null,
-    createdBy,
-    titleLength: title.trim().length,
-    startUTC,
-    endUTC,
-  })
+  console.info('[api/events][POST] payload', JSON.stringify(req.body, null, 2))
 
   try {
     const event = await sharedCalendarEventsRepository.createEvent({
@@ -189,12 +183,10 @@ app.post('/api/events', requireAuth, async (req, res) => {
 
     return res.status(201).json({ event })
   } catch (error) {
-    console.error('[api/events][POST] create failed', {
-      message: error?.message ?? 'Unknown error',
-      code: error?.code ?? null,
-      details: error?.details ?? null,
-      hint: error?.hint ?? null,
-    })
+    console.error(
+      '[api/events][POST] create failed',
+      JSON.stringify(error, null, 2)
+    )
 
     if (error?.code || error?.details || error?.hint) {
       return res.status(400).json({
