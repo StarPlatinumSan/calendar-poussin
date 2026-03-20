@@ -149,14 +149,65 @@ app.get('/api/events', requireAuth, async (_req, res) => {
 
 app.post('/api/events', requireAuth, async (req, res) => {
   const { title, startUTC, endUTC, createdBy } = req.body || {}
-  const event = await sharedCalendarEventsRepository.createEvent({
-    title,
+
+  if (typeof title !== 'string' || !title.trim()) {
+    return res.status(400).json({ error: 'Invalid title' })
+  }
+
+  if (!['canada', 'france'].includes(createdBy)) {
+    return res.status(400).json({ error: 'Invalid createdBy value' })
+  }
+
+  if (
+    typeof startUTC !== 'string' ||
+    typeof endUTC !== 'string' ||
+    Number.isNaN(Date.parse(startUTC)) ||
+    Number.isNaN(Date.parse(endUTC))
+  ) {
+    return res.status(400).json({ error: 'Invalid startUTC/endUTC values' })
+  }
+
+  if (new Date(endUTC).getTime() <= new Date(startUTC).getTime()) {
+    return res.status(400).json({ error: 'endUTC must be after startUTC' })
+  }
+
+  console.info('[api/events][POST] create attempt', {
+    userId: req.user?.id ?? null,
+    createdBy,
+    titleLength: title.trim().length,
     startUTC,
     endUTC,
-    createdBy,
   })
 
-  return res.status(201).json({ event })
+  try {
+    const event = await sharedCalendarEventsRepository.createEvent({
+      title: title.trim(),
+      startUTC,
+      endUTC,
+      createdBy,
+    })
+
+    return res.status(201).json({ event })
+  } catch (error) {
+    console.error('[api/events][POST] create failed', {
+      message: error?.message ?? 'Unknown error',
+      code: error?.code ?? null,
+      details: error?.details ?? null,
+      hint: error?.hint ?? null,
+    })
+
+    if (error?.code || error?.details || error?.hint) {
+      return res.status(400).json({
+        error: 'Event creation failed',
+        message: error?.message ?? null,
+        code: error?.code ?? null,
+        details: error?.details ?? null,
+        hint: error?.hint ?? null,
+      })
+    }
+
+    return res.status(500).json({ error: 'Internal server error' })
+  }
 })
 
 app.put('/api/events/:id', requireAuth, async (req, res) => {
