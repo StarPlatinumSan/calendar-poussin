@@ -10,7 +10,11 @@ import EventComposerModal from "./EventComposerModal";
 import EventDetailsPanel from "./EventDetailsPanel";
 import MobileDayView from "./MobileDayView";
 
-const DEFAULT_DAY = DateTime.now().setZone(PRIMARY_ZONE).toISODate();
+function getCurrentDayISO() {
+	return DateTime.now().setZone(PRIMARY_ZONE).toISODate();
+}
+
+const DEFAULT_DAY = getCurrentDayISO();
 const configuredApiBaseUrl = (import.meta.env.VITE_API_URL || "").trim();
 const isConfiguredApiLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredApiBaseUrl);
 const API_BASE_URL = import.meta.env.DEV ? configuredApiBaseUrl || "http://localhost:4000" : isConfiguredApiLocalhost ? "" : configuredApiBaseUrl;
@@ -134,8 +138,9 @@ export default function SharedCalendar({ user, onLogout }) {
 	};
 
 	const handleToday = () => {
-		setSelectedDayISO(DEFAULT_DAY);
-		setMonthCursor(DateTime.fromISO(DEFAULT_DAY, { zone: PRIMARY_ZONE }).startOf("month"));
+		const todayISO = getCurrentDayISO();
+		setSelectedDayISO(todayISO);
+		setMonthCursor(DateTime.fromISO(todayISO, { zone: PRIMARY_ZONE }).startOf("month"));
 		setIsDesktopDayLocked(false);
 	};
 

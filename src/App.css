@@ -328,9 +328,37 @@ body {
 	opacity: 0.58;
 }
 
+.day-cell--past {
+	background: #f9f5f8;
+	border-color: #ebdfe6;
+}
+
+.day-cell--past .day-cell__header span {
+	color: #9f8595;
+}
+
+.day-cell--past .day-cell__add {
+	background: #f2eaf0;
+	color: #b191a4;
+}
+
+.day-cell--today {
+	border-color: #b3688b;
+	box-shadow: inset 0 0 0 1px rgba(179, 104, 139, 0.3);
+	background: linear-gradient(180deg, #fff7fb 0%, #fff 100%);
+}
+
+.day-cell--today .day-cell__header span {
+	color: #8e3f66;
+}
+
 .day-cell--selected {
 	border-color: #d985ad;
 	box-shadow: inset 0 0 0 1px rgba(217, 133, 173, 0.2);
+}
+
+.day-cell--today.day-cell--selected {
+	box-shadow: inset 0 0 0 2px rgba(179, 104, 139, 0.35);
 }
 
 .day-cell__header {

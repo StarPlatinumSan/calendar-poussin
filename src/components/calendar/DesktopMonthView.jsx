@@ -31,9 +31,10 @@ export default function DesktopMonthView({ monthCursor, selectedDayISO, events, 
 					const outsideMonth = day.toFormat("yyyy-LL") !== monthKey;
 					const isSelected = selectedDayISO === dayISO;
 					const isPastDay = day.startOf("day").toMillis() < todayStart.toMillis();
+					const isToday = day.hasSame(todayStart, "day");
 
 					return (
-						<article key={dayISO} className={`day-cell${outsideMonth ? " day-cell--outside" : ""}${isSelected ? " day-cell--selected" : ""}${isPastDay ? " day-cell--past" : ""}`} onClick={() => onLockDay(dayISO)}>
+						<article key={dayISO} className={`day-cell${outsideMonth ? " day-cell--outside" : ""}${isSelected ? " day-cell--selected" : ""}${isPastDay ? " day-cell--past" : ""}${isToday ? " day-cell--today" : ""}`} onClick={() => onLockDay(dayISO)}>
 							<div className="day-cell__header">
 								<span>{day.day}</span>
 								<button
@@ -50,8 +51,6 @@ export default function DesktopMonthView({ monthCursor, selectedDayISO, events, 
 							</div>
 							<div className="day-cell__events">
 								{dayEvents.slice(0, 3).map((event) => {
-									const owner = USERS[event.createdBy];
-
 									return (
 										<button
 											key={event.id}
