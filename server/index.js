@@ -11,9 +11,6 @@ import sharedCalendarEventsRepository from "./lib/sharedCalendarEventsRepository
 
 dotenv.config();
 
-console.log("GOOGLE_CALLBACK_URL:", process.env.GOOGLE_CALLBACK_URL);
-console.log("CLIENT_ORIGIN:", process.env.CLIENT_ORIGIN);
-
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
