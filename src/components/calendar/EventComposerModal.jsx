@@ -2,14 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import { USERS } from "../../constants/timezones";
 import { formatRangeInZone, getDurationLabel, toLocalDateTimeParts, toUtcIsoFromLocal } from "../../utils/dateTime";
 
+function getSourceZone(createdBy) {
+	return USERS[createdBy]?.zone || USERS.canada.zone;
+}
+
 function buildInitialForm(defaultDayISO, initialEvent) {
 	if (initialEvent) {
-		const sourceZone = USERS[initialEvent.createdBy].zone;
+		const sourceZone = getSourceZone(initialEvent.createdBy);
 		const startParts = toLocalDateTimeParts(initialEvent.startUTC, sourceZone);
 		const endParts = toLocalDateTimeParts(initialEvent.endUTC, sourceZone);
 
 		return {
-			title: initialEvent.title || "Indisponible",
+			title: initialEvent.title || (initialEvent.createdBy === "appel" ? "Appel" : "Indisponible"),
 			createdBy: initialEvent.createdBy,
 			dateISO: startParts.dayISO,
 			startTime: startParts.timeHHmm,
@@ -43,7 +47,7 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 			return null;
 		}
 
-		const sourceZone = USERS[form.createdBy].zone;
+		const sourceZone = getSourceZone(form.createdBy);
 		const startUTC = toUtcIsoFromLocal(form.dateISO, form.startTime, sourceZone);
 		const endUTC = toUtcIsoFromLocal(form.dateISO, form.endTime, sourceZone);
 
@@ -65,7 +69,7 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 		event.preventDefault();
 		setError("");
 
-		const sourceZone = USERS[form.createdBy].zone;
+		const sourceZone = getSourceZone(form.createdBy);
 		const startUTC = toUtcIsoFromLocal(form.dateISO, form.startTime, sourceZone);
 		const endUTC = toUtcIsoFromLocal(form.dateISO, form.endTime, sourceZone);
 
@@ -75,13 +79,13 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 		}
 
 		if (new Date(endUTC) <= new Date(startUTC)) {
-			setError("L'heure de fin doit être après le début.");
+			setError("L'heure de fin doit etre apres le debut.");
 			return;
 		}
 
 		onSave({
 			id: initialEvent?.id ?? crypto.randomUUID(),
-			title: form.title.trim() || "Indisponible",
+			title: form.createdBy === "appel" ? "Appel" : form.title.trim() || "Indisponible",
 			createdBy: form.createdBy,
 			startUTC,
 			endUTC,
@@ -99,7 +103,7 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 	return (
 		<div className="modal-backdrop" onClick={onClose} role="presentation">
 			<div className="modal" onClick={(event) => event.stopPropagation()}>
-				<h2>{isEditMode ? "Modifier le bloc" : "Ajouter une indisponibilité"}</h2>
+				<h2>{isEditMode ? "Modifier le bloc" : "Ajouter une indisponibilite"}</h2>
 				<form onSubmit={handleSubmit} className="event-form">
 					<label>
 						Titre
@@ -107,14 +111,25 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 					</label>
 
 					<label>
-						Créé par
-						<select value={form.createdBy} onChange={(event) => setForm((current) => ({ ...current, createdBy: event.target.value }))}>
+						Cree par
+						<select
+							value={form.createdBy}
+							onChange={(event) => {
+								const nextCreatedBy = event.target.value;
+								setForm((current) => ({
+									...current,
+									createdBy: nextCreatedBy,
+									title: nextCreatedBy === "appel" ? "Appel" : current.title,
+								}));
+							}}
+						>
 							<option value="canada">
 								{USERS.canada.flag} {USERS.canada.person}
 							</option>
 							<option value="france">
 								{USERS.france.flag} {USERS.france.person}
 							</option>
+							<option value="appel">Appel</option>
 						</select>
 					</label>
 
@@ -124,7 +139,7 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 							<input type="date" value={form.dateISO} onChange={(event) => setForm((current) => ({ ...current, dateISO: event.target.value }))} />
 						</label>
 						<label>
-							Début
+							Debut
 							<input type="time" value={form.startTime} onChange={(event) => setForm((current) => ({ ...current, startTime: event.target.value }))} />
 						</label>
 						<label>
@@ -135,14 +150,14 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 
 					{preview ? (
 						<div className="event-preview">
-							<strong>Aperçu</strong>
+							<strong>Apercu</strong>
 							<p>
-								{USERS.canada.flag} Montréal : {formatRangeInZone(preview.startUTC, preview.endUTC, USERS.canada.zone)}
+								{USERS.canada.flag} Montreal : {formatRangeInZone(preview.startUTC, preview.endUTC, USERS.canada.zone)}
 							</p>
 							<p>
 								{USERS.france.flag} Grenoble : {formatRangeInZone(preview.startUTC, preview.endUTC, USERS.france.zone)}
 							</p>
-							<p>Durée : {getDurationLabel(preview.startUTC, preview.endUTC)}</p>
+							<p>Duree : {getDurationLabel(preview.startUTC, preview.endUTC)}</p>
 						</div>
 					) : null}
 
@@ -166,3 +181,4 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 		</div>
 	);
 }
+

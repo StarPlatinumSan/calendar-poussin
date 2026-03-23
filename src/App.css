@@ -9,6 +9,7 @@
 	--border-soft: #f2cadc;
 	--canada: #90e5ff;
 	--france: #ffd9ea;
+	--appel: #b8f0c6;
 	--free: whitesmoke;
 	--shadow-soft: 0 16px 36px rgba(245, 166, 200, 0.2);
 }
@@ -419,6 +420,10 @@ body {
 	background: var(--france);
 }
 
+.event-chip--appel {
+	background: var(--appel);
+}
+
 .day-cell__more {
 	margin: 0;
 	font-size: 0.76rem;
@@ -498,6 +503,15 @@ body {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
+	will-change: transform, opacity;
+}
+
+.mobile-day--enter-next {
+	animation: mobile-day-enter-next 0.24s ease;
+}
+
+.mobile-day--enter-prev {
+	animation: mobile-day-enter-prev 0.24s ease;
 }
 
 .mobile-add-btn {
@@ -509,6 +523,28 @@ body {
 .mobile-hint {
 	font-size: 0.78rem;
 	color: #87596f;
+}
+
+@keyframes mobile-day-enter-next {
+	from {
+		opacity: 0.45;
+		transform: translateX(16px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@keyframes mobile-day-enter-prev {
+	from {
+		opacity: 0.45;
+		transform: translateX(-16px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
 }
 
 .timeline {
@@ -579,6 +615,11 @@ body {
 .timeline-event--france {
 	background: var(--france);
 	color: #4f2437;
+}
+
+.timeline-event--appel {
+	background: var(--appel);
+	color: #1f4d2d;
 }
 
 .modal-backdrop {

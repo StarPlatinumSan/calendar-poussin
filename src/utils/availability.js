@@ -79,7 +79,7 @@ export function getSharedFreeWindows(events, dayISO, zone) {
 
   const busyByUser = USER_ORDER.reduce((accumulator, userId) => {
     const intervals = events
-      .filter((event) => event.createdBy === userId)
+      .filter((event) => event.createdBy === userId || event.createdBy === 'appel')
       .map((event) => {
         const startUtc = DateTime.fromISO(event.startUTC, { zone: 'utc' })
         const endUtc = DateTime.fromISO(event.endUTC, { zone: 'utc' })

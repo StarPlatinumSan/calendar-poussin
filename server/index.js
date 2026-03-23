@@ -141,7 +141,7 @@ app.post("/api/events", requireAuth, async (req, res) => {
 		return res.status(400).json({ error: "Invalid title" });
 	}
 
-	if (!["canada", "france"].includes(createdBy)) {
+	if (!["canada", "france", "appel"].includes(createdBy)) {
 		return res.status(400).json({ error: "Invalid createdBy value" });
 	}
 

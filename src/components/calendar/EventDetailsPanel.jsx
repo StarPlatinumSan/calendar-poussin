@@ -1,17 +1,22 @@
 import { USERS } from "../../constants/timezones";
 import { formatDayLabel, formatDayKeyInZone, formatRangeInZone, getDurationLabel } from "../../utils/dateTime";
 
+const DEFAULT_OWNER = {
+	person: "Appel",
+	city: "A deux",
+};
+
 export default function EventDetailsPanel({ event, onEdit, onDelete }) {
 	if (!event) {
 		return (
 			<aside className="details-panel">
-				<h3>Détails du bloc</h3>
-				<p>Sélectionne un événement pour le modifier ou le supprimer.</p>
+				<h3>Details du bloc</h3>
+				<p>Selectionne un evenement pour le modifier ou le supprimer.</p>
 			</aside>
 		);
 	}
 
-	const owner = USERS[event.createdBy];
+	const owner = USERS[event.createdBy] || DEFAULT_OWNER;
 	const dayISO = formatDayKeyInZone(event.startUTC, USERS.canada.zone);
 
 	return (
@@ -23,12 +28,12 @@ export default function EventDetailsPanel({ event, onEdit, onDelete }) {
 			<div className="details-panel__rows">
 				<p>{formatDayLabel(dayISO, USERS.canada.zone)}</p>
 				<p>
-					{USERS.canada.flag} Montréal : {formatRangeInZone(event.startUTC, event.endUTC, USERS.canada.zone)}
+					{USERS.canada.flag} Montreal : {formatRangeInZone(event.startUTC, event.endUTC, USERS.canada.zone)}
 				</p>
 				<p>
 					{USERS.france.flag} Grenoble : {formatRangeInZone(event.startUTC, event.endUTC, USERS.france.zone)}
 				</p>
-				<p>Durée : {getDurationLabel(event.startUTC, event.endUTC)}</p>
+				<p>Duree : {getDurationLabel(event.startUTC, event.endUTC)}</p>
 			</div>
 			<div className="details-panel__actions">
 				<button type="button" className="secondary-btn" onClick={() => onEdit(event)}>

@@ -1,19 +1,52 @@
-ï»¿import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PRIMARY_ZONE, USERS } from "../../constants/timezones";
 import { clipEventToDay, eventsForDay, formatRangeInZone } from "../../utils/dateTime";
 
 const HOURS = Array.from({ length: 24 }, (_value, index) => index);
+const SWIPE_THRESHOLD_PX = 90;
+const SWIPE_HORIZONTAL_RATIO = 1.2;
 
-export default function MobileDayView({ dayISO, events, sharedFreeWindows, onShiftDay, onSelectEvent, onOpenCreateForDay, enableSwipe = true, hintText = "Glisse Ã  gauche/droite pour changer de jour" }) {
+export default function MobileDayView({ dayISO, events, sharedFreeWindows, onShiftDay, onSelectEvent, onOpenCreateForDay, enableSwipe = true, hintText = "Glisse à gauche/droite pour changer de jour" }) {
 	const touchStartRef = useRef(null);
+	const swipeDirectionRef = useRef(0);
+	const animationTimeoutRef = useRef(null);
+	const [transitionClass, setTransitionClass] = useState("");
 
 	const dayEvents = eventsForDay(events, dayISO, PRIMARY_ZONE).map((event) => ({
 		...event,
 		position: clipEventToDay(event, dayISO, PRIMARY_ZONE),
 	}));
 
+	useEffect(() => {
+		if (!swipeDirectionRef.current) {
+			return undefined;
+		}
+
+		const nextTransitionClass = swipeDirectionRef.current > 0 ? "mobile-day--enter-next" : "mobile-day--enter-prev";
+		setTransitionClass(nextTransitionClass);
+		swipeDirectionRef.current = 0;
+
+		window.clearTimeout(animationTimeoutRef.current);
+		animationTimeoutRef.current = window.setTimeout(() => {
+			setTransitionClass("");
+		}, 240);
+
+		return () => {
+			window.clearTimeout(animationTimeoutRef.current);
+		};
+	}, [dayISO]);
+
+	useEffect(() => {
+		return () => {
+			window.clearTimeout(animationTimeoutRef.current);
+		};
+	}, []);
+
 	const handleTouchStart = (event) => {
-		touchStartRef.current = event.changedTouches[0].clientX;
+		touchStartRef.current = {
+			x: event.changedTouches[0].clientX,
+			y: event.changedTouches[0].clientY,
+		};
 	};
 
 	const handleTouchEnd = (event) => {
@@ -25,18 +58,25 @@ export default function MobileDayView({ dayISO, events, sharedFreeWindows, onShi
 			return;
 		}
 
-		const deltaX = event.changedTouches[0].clientX - touchStartRef.current;
+		const deltaX = event.changedTouches[0].clientX - touchStartRef.current.x;
+		const deltaY = event.changedTouches[0].clientY - touchStartRef.current.y;
 		touchStartRef.current = null;
 
-		if (Math.abs(deltaX) < 55) {
+		if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX) {
 			return;
 		}
 
-		onShiftDay(deltaX > 0 ? -1 : 1);
+		if (Math.abs(deltaX) < Math.abs(deltaY) * SWIPE_HORIZONTAL_RATIO) {
+			return;
+		}
+
+		const direction = deltaX > 0 ? -1 : 1;
+		swipeDirectionRef.current = direction;
+		onShiftDay(direction);
 	};
 
 	return (
-		<section className="mobile-day" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+		<section className={`mobile-day ${transitionClass}`.trim()} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
 			<button type="button" className="mobile-add-btn" onClick={() => onOpenCreateForDay(dayISO)}>
 				Ajouter un bloc
 			</button>
@@ -71,7 +111,7 @@ export default function MobileDayView({ dayISO, events, sharedFreeWindows, onShi
 						<button key={event.id} type="button" className={`timeline-event timeline-event--${event.createdBy}`} style={{ top: `${top}%`, height: `${height}%` }} onClick={() => onSelectEvent(event)}>
 							<strong>{event.title}</strong>
 							<small>
-								{USERS.canada.flag} MontrÃ©al : {formatRangeInZone(event.startUTC, event.endUTC, USERS.canada.zone)}
+								{USERS.canada.flag} Montréal : {formatRangeInZone(event.startUTC, event.endUTC, USERS.canada.zone)}
 							</small>
 							<small>
 								{USERS.france.flag} Grenoble : {formatRangeInZone(event.startUTC, event.endUTC, USERS.france.zone)}
