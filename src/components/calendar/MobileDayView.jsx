@@ -6,7 +6,7 @@ const HOURS = Array.from({ length: 24 }, (_value, index) => index);
 const SWIPE_THRESHOLD_PX = 90;
 const SWIPE_HORIZONTAL_RATIO = 1.2;
 
-export default function MobileDayView({ dayISO, events, sharedFreeWindows, onShiftDay, onSelectEvent, onOpenCreateForDay, enableSwipe = true, hintText = "Glisse à gauche/droite pour changer de jour" }) {
+export default function MobileDayView({ dayISO, events, sharedFreeWindows, onShiftDay, onSelectEvent, onOpenCreateForDay, enableSwipe = true, hintText = "Glisse Ã  gauche/droite pour changer de jour" }) {
 	const touchStartRef = useRef(null);
 	const swipeDirectionRef = useRef(0);
 	const animationTimeoutRef = useRef(null);
@@ -111,7 +111,7 @@ export default function MobileDayView({ dayISO, events, sharedFreeWindows, onShi
 						<button key={event.id} type="button" className={`timeline-event timeline-event--${event.createdBy}`} style={{ top: `${top}%`, height: `${height}%` }} onClick={() => onSelectEvent(event)}>
 							<strong>{event.title}</strong>
 							<small>
-								{USERS.canada.flag} Montréal : {formatRangeInZone(event.startUTC, event.endUTC, USERS.canada.zone)}
+								{USERS.canada.flag} MontrÃ©al : {formatRangeInZone(event.startUTC, event.endUTC, USERS.canada.zone)}
 							</small>
 							<small>
 								{USERS.france.flag} Grenoble : {formatRangeInZone(event.startUTC, event.endUTC, USERS.france.zone)}

@@ -3,7 +3,7 @@ import { formatDayLabel, formatDayKeyInZone, formatRangeInZone, getDurationLabel
 
 const DEFAULT_OWNER = {
 	person: "Appel",
-	city: "A deux",
+	city: "",
 };
 
 export default function EventDetailsPanel({ event, onEdit, onDelete }) {
