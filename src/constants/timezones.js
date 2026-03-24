@@ -21,7 +21,7 @@ export const USERS = {
 		id: "appel",
 		name: "Appel",
 		person: "Appel",
-		city: "",
+		city: "Disponibilité",
 		flag: "\uD83D\uDFE2",
 		zone: "America/Toronto",
 		color: "#9fe8b1",
