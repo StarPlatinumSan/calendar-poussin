@@ -26,8 +26,37 @@ const NOTIFICATION_OPTIONS = [
 ];
 const DEFAULT_NOTIFICATION_TIMINGS = ["0m"];
 
-function isWebPushSupported() {
-	return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+function getWebPushSupportStatus() {
+	if (typeof window === "undefined") {
+		return { supported: false, message: "Les notifications push ne sont pas disponibles dans ce contexte." };
+	}
+
+	if (!window.isSecureContext) {
+		return { supported: false, message: "Les notifications push exigent une connexion HTTPS." };
+	}
+
+	if (!("Notification" in window)) {
+		return { supported: false, message: "Ce navigateur ne supporte pas les notifications." };
+	}
+
+	if (!("serviceWorker" in navigator)) {
+		return { supported: false, message: "Ce navigateur ne supporte pas les Service Workers." };
+	}
+
+	const hasPushManager = "PushManager" in window || (typeof ServiceWorkerRegistration !== "undefined" && "pushManager" in ServiceWorkerRegistration.prototype);
+	if (!hasPushManager) {
+		return { supported: false, message: "Ce navigateur ne supporte pas les notifications push." };
+	}
+
+	const userAgent = navigator.userAgent || "";
+	const isIOS = /iPad|iPhone|iPod/i.test(userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+	const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
+
+	if (isIOS && !isStandalone) {
+		return { supported: false, message: "Sur iPhone, ouvre l'app depuis l'écran d'accueil pour activer les notifications." };
+	}
+
+	return { supported: true, message: "" };
 }
 
 function urlBase64ToUint8Array(base64String) {
@@ -79,7 +108,18 @@ async function apiFetch(path, { method = "GET", body } = {}) {
 	});
 
 	if (!response.ok) {
-		throw new Error(`Request failed: ${response.status}`);
+		let errorMessage = `Request failed: ${response.status}`;
+
+		try {
+			const payload = await response.json();
+			errorMessage = payload?.error || payload?.message || errorMessage;
+		} catch {
+			// Keep the generic message if the body is not JSON.
+		}
+
+		const requestError = new Error(errorMessage);
+		requestError.status = response.status;
+		throw requestError;
 	}
 
 	if (response.status === 204) {
@@ -100,16 +140,17 @@ export default function SharedCalendar({ user, onLogout }) {
 	const [notificationPrefs, setNotificationPrefs] = useState({});
 	const [notificationPermission, setNotificationPermission] = useState(() => (typeof window !== "undefined" && "Notification" in window ? Notification.permission : "unsupported"));
 	const [notificationError, setNotificationError] = useState("");
-	const [webPushSupported] = useState(() => isWebPushSupported());
+	const [webPushSupport, setWebPushSupport] = useState(() => getWebPushSupportStatus());
 	const isMobile = useIsMobile(900);
 	const serviceWorkerRegistrationRef = useRef(null);
 	const vapidPublicKeyRef = useRef("");
+	const webPushSupported = webPushSupport.supported;
 
 	const ensurePushSubscription = useCallback(
 		async ({ requestPermission }) => {
 			if (!webPushSupported) {
 				setNotificationPermission("unsupported");
-				setNotificationError("Web Push n'est pas supporte sur ce navigateur.");
+				setNotificationError(webPushSupport.message || "Web Push n'est pas supporte sur ce navigateur.");
 				return false;
 			}
 
@@ -158,12 +199,17 @@ export default function SharedCalendar({ user, onLogout }) {
 
 				setNotificationError("");
 				return true;
-			} catch {
-				setNotificationError("Impossible d'activer les notifications push.");
+			} catch (error) {
+				if (error?.status === 503) {
+					setNotificationError("Le serveur n'a pas la configuration Web Push (VAPID) active.");
+					return false;
+				}
+
+				setNotificationError(error?.message || "Impossible d'activer les notifications push.");
 				return false;
 			}
 		},
-		[webPushSupported],
+		[webPushSupport.message, webPushSupported],
 	);
 
 	useEffect(() => {
@@ -209,7 +255,10 @@ export default function SharedCalendar({ user, onLogout }) {
 	}, []);
 
 	useEffect(() => {
-		if (!webPushSupported) {
+		const support = getWebPushSupportStatus();
+		setWebPushSupport(support);
+
+		if (!support.supported) {
 			return;
 		}
 
@@ -218,7 +267,7 @@ export default function SharedCalendar({ user, onLogout }) {
 		if (Notification.permission === "granted") {
 			ensurePushSubscription({ requestPermission: false });
 		}
-	}, [webPushSupported, ensurePushSubscription]);
+	}, [ensurePushSubscription]);
 
 	const sharedFreeWindows = useMemo(() => getSharedFreeWindows(events, selectedDayISO, PRIMARY_ZONE), [events, selectedDayISO]);
 	const dayEvents = useMemo(() => eventsForDay(events, selectedDayISO, PRIMARY_ZONE), [events, selectedDayISO]);
@@ -449,6 +498,7 @@ export default function SharedCalendar({ user, onLogout }) {
 							onToggleNotificationEnabled={handleToggleEventNotifications}
 							onToggleNotificationTiming={handleToggleEventNotificationTiming}
 							notificationSupported={webPushSupported}
+							notificationSupportHint={webPushSupport.message}
 							notificationPermission={notificationPermission}
 							notificationError={notificationError}
 						/>

@@ -6,7 +6,7 @@ const DEFAULT_OWNER = {
 	city: "",
 };
 
-export default function EventDetailsPanel({ event, onEdit, onDelete, notificationPreference, notificationOptions, onToggleNotificationEnabled, onToggleNotificationTiming, notificationSupported, notificationPermission, notificationError }) {
+export default function EventDetailsPanel({ event, onEdit, onDelete, notificationPreference, notificationOptions, onToggleNotificationEnabled, onToggleNotificationTiming, notificationSupported, notificationSupportHint, notificationPermission, notificationError }) {
 	if (!event) {
 		return (
 			<aside className="details-panel">
@@ -47,7 +47,7 @@ export default function EventDetailsPanel({ event, onEdit, onDelete, notificatio
 			<section className="details-panel__notifications">
 				<h4>Rappels</h4>
 				{!notificationSupported ? (
-					<p>Les notifications ne sont pas disponibles dans ce navigateur.</p>
+					<p>{notificationSupportHint || "Les notifications ne sont pas disponibles dans ce navigateur."}</p>
 				) : (
 					<>
 						{!isNotificationEnabled ? (
