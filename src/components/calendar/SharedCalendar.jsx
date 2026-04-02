@@ -454,10 +454,10 @@ export default function SharedCalendar({ user, onLogout }) {
 						/>
 
 						<section className="availability-panel">
-							<h3>Creneaux libres en commun</h3>
+							<h3>Créneaux libres en commun</h3>
 							<p>{formatDayLabel(selectedDayISO, USERS.canada.zone)}</p>
 							{sharedFreeWindows.length === 0 ? (
-								<p>Aucun creneau commun de 30 min ou plus.</p>
+								<p>Aucun créneau commun de 30 min ou plus.</p>
 							) : (
 								<ul>
 									{sharedFreeWindows.map(([startMinute, endMinute]) => {
