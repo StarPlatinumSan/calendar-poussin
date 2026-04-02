@@ -368,7 +368,7 @@ if (HAS_WEB_PUSH_CONFIG) {
 		reminderDeliveryLogRepository,
 		sharedCalendarEventsRepository,
 		pushSubscriptionsRepository,
-		intervalMs: 5 * 60 * 1000,
+		intervalMs: 30 * 1000,
 	});
 }
 
