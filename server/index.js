@@ -33,6 +33,8 @@ const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "";
 const HAS_WEB_PUSH_CONFIG = Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && VAPID_SUBJECT);
 const ALLOWED_REMINDER_TIMINGS = new Set(TIMING_OPTIONS.map((option) => option.id));
+const EVENT_RETENTION_DAYS = Math.max(Number(process.env.EVENT_RETENTION_DAYS) || 30, 1);
+const EVENT_CLEANUP_INTERVAL_MS = Math.max(Number(process.env.EVENT_CLEANUP_INTERVAL_MS) || 24 * 60 * 60 * 1000, 60 * 1000);
 
 const requiredEnvVars = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_CALLBACK_URL", "SESSION_SECRET", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
 
@@ -112,6 +114,41 @@ const requireAuth = (req, res, next) => {
 };
 
 const getCurrentUserId = (req) => req.user?.id || req.user?.email || null;
+
+function startOldEventsCleanupScheduler() {
+	let inFlight = false;
+
+	const runCleanup = async () => {
+		if (inFlight) {
+			return;
+		}
+
+		inFlight = true;
+
+		try {
+			const cutoffUtcISO = new Date(Date.now() - EVENT_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+			const deletedCount = await sharedCalendarEventsRepository.deleteEventsEndedBefore(cutoffUtcISO);
+
+			if (deletedCount > 0) {
+				console.info(`[cleanup/events] deleted ${deletedCount} event(s) ended before ${cutoffUtcISO}`);
+			}
+		} catch (error) {
+			console.error("[cleanup/events] failed", JSON.stringify(error, null, 2));
+		} finally {
+			inFlight = false;
+		}
+	};
+
+	const intervalId = setInterval(() => {
+		runCleanup();
+	}, EVENT_CLEANUP_INTERVAL_MS);
+
+	runCleanup();
+
+	return () => {
+		clearInterval(intervalId);
+	};
+}
 
 app.get("/health", (_req, res) => {
 	res.json({ ok: true });
@@ -349,9 +386,11 @@ if (HAS_WEB_PUSH_CONFIG) {
 		reminderDeliveryLogRepository,
 		sharedCalendarEventsRepository,
 		pushSubscriptionsRepository,
-			intervalMs: 60 * 1000,
+		intervalMs: 60 * 1000,
 	});
 }
+
+startOldEventsCleanupScheduler();
 
 app.listen(PORT, () => {
 	console.log(`Auth server listening on port ${PORT}`);

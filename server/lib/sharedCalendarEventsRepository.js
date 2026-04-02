@@ -103,10 +103,25 @@ async function deleteEvent(id) {
 	}
 }
 
+async function deleteEventsEndedBefore(cutoffUtcISO) {
+	const { data, error } = await supabase
+		.from(TABLE_NAME)
+		.delete()
+		.lt('end_utc', cutoffUtcISO)
+		.select('id')
+
+	if (error) {
+		throw error
+	}
+
+	return Array.isArray(data) ? data.length : 0
+}
+
 export default {
 	listEvents,
 	listEventsByIds,
 	createEvent,
 	updateEvent,
 	deleteEvent,
+	deleteEventsEndedBefore,
 }
