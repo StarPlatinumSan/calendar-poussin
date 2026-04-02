@@ -6,18 +6,7 @@ const DEFAULT_OWNER = {
 	city: "",
 };
 
-export default function EventDetailsPanel({
-	event,
-	onEdit,
-	onDelete,
-	notificationPreference,
-	notificationOptions,
-	onToggleNotificationEnabled,
-	onToggleNotificationTiming,
-	notificationSupported,
-	notificationPermission,
-	notificationError,
-}) {
+export default function EventDetailsPanel({ event, onEdit, onDelete, notificationPreference, notificationOptions, onToggleNotificationEnabled, onToggleNotificationTiming, notificationSupported, notificationPermission, notificationError }) {
 	if (!event) {
 		return (
 			<aside className="details-panel">
@@ -45,7 +34,7 @@ export default function EventDetailsPanel({
 				<p>
 					{USERS.france.flag} Grenoble : {formatRangeInZone(event.startUTC, event.endUTC, USERS.france.zone)}
 				</p>
-				<p>Duree : {getDurationLabel(event.startUTC, event.endUTC)}</p>
+				<p>Durée : {getDurationLabel(event.startUTC, event.endUTC)}</p>
 			</div>
 			<div className="details-panel__actions">
 				<button type="button" className="secondary-btn" onClick={() => onEdit(event)}>
@@ -73,11 +62,7 @@ export default function EventDetailsPanel({
 								<div className="details-panel__notification-options">
 									{notificationOptions.map((option) => (
 										<label key={option.id} className="details-panel__checkbox">
-											<input
-												type="checkbox"
-												checked={Boolean(notificationPreference?.timings?.includes(option.id))}
-												onChange={(changeEvent) => onToggleNotificationTiming(event.id, option.id, changeEvent.target.checked)}
-											/>
+											<input type="checkbox" checked={Boolean(notificationPreference?.timings?.includes(option.id))} onChange={(changeEvent) => onToggleNotificationTiming(event.id, option.id, changeEvent.target.checked)} />
 											{option.label}
 										</label>
 									))}

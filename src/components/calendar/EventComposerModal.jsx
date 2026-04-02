@@ -157,7 +157,7 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 							<p>
 								{USERS.france.flag} Grenoble : {formatRangeInZone(preview.startUTC, preview.endUTC, USERS.france.zone)}
 							</p>
-							<p>Duree : {getDurationLabel(preview.startUTC, preview.endUTC)}</p>
+							<p>Durée : {getDurationLabel(preview.startUTC, preview.endUTC)}</p>
 						</div>
 					) : null}
 
@@ -181,4 +181,3 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 		</div>
 	);
 }
-
