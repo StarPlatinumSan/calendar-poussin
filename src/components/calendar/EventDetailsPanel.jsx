@@ -88,7 +88,7 @@ export default function EventDetailsPanel({
 								</div>
 							</>
 						)}
-						{notificationPermission === "denied" ? <p>Permission refusee. Autorise les notifications dans ton navigateur.</p> : null}
+						{notificationPermission === "denied" ? <p>Permission refusée. Autorise les notifications dans ton navigateur.</p> : null}
 						{notificationError ? <p>{notificationError}</p> : null}
 					</>
 				)}
