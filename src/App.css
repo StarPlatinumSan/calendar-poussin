@@ -562,6 +562,22 @@ body {
 	color: #87596f;
 }
 
+.mobile-event-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 24;
+	background: rgba(38, 23, 31, 0.36);
+	display: grid;
+	place-items: center;
+	padding: 14px;
+}
+
+.mobile-event-overlay__dialog {
+	width: min(560px, 100%);
+	max-height: min(86vh, 760px);
+	overflow: auto;
+}
+
 @keyframes mobile-day-enter-next {
 	from {
 		opacity: 0.45;

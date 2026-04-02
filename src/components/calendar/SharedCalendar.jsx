@@ -453,6 +453,7 @@ export default function SharedCalendar({ user, onLogout }) {
 	};
 
 	const isDayLocked = !isMobile && isDesktopDayLocked;
+	const showMobileEventOverlay = isMobile && Boolean(activeEvent) && !isComposerOpen;
 
 	return (
 		<div className="app-shell">
@@ -505,20 +506,22 @@ export default function SharedCalendar({ user, onLogout }) {
 					</div>
 
 					<aside className="calendar-main__side">
-						<EventDetailsPanel
-							event={activeEvent}
-							onEdit={handleEdit}
-							onDelete={handleDeleteEvent}
-							onTogglePreserve={handleTogglePreserveEvent}
-							notificationPreference={activeEventNotificationPref}
-							notificationOptions={NOTIFICATION_OPTIONS}
-							onToggleNotificationEnabled={handleToggleEventNotifications}
-							onToggleNotificationTiming={handleToggleEventNotificationTiming}
-							notificationSupported={webPushSupported}
-							notificationSupportHint={webPushSupport.message}
-							notificationPermission={notificationPermission}
-							notificationError={notificationError}
-						/>
+						{!isMobile ? (
+							<EventDetailsPanel
+								event={activeEvent}
+								onEdit={handleEdit}
+								onDelete={handleDeleteEvent}
+								onTogglePreserve={handleTogglePreserveEvent}
+								notificationPreference={activeEventNotificationPref}
+								notificationOptions={NOTIFICATION_OPTIONS}
+								onToggleNotificationEnabled={handleToggleEventNotifications}
+								onToggleNotificationTiming={handleToggleEventNotificationTiming}
+								notificationSupported={webPushSupported}
+								notificationSupportHint={webPushSupport.message}
+								notificationPermission={notificationPermission}
+								notificationError={notificationError}
+							/>
+						) : null}
 
 						<section className="availability-panel">
 							<h3>Créneaux libres en commun</h3>
@@ -579,6 +582,27 @@ export default function SharedCalendar({ user, onLogout }) {
 					</aside>
 				</div>
 			</div>
+
+			{showMobileEventOverlay ? (
+				<div className="mobile-event-overlay" onClick={() => setActiveEvent(null)} role="presentation">
+					<div className="mobile-event-overlay__dialog" onClick={(event) => event.stopPropagation()} role="presentation">
+						<EventDetailsPanel
+							event={activeEvent}
+							onEdit={handleEdit}
+							onDelete={handleDeleteEvent}
+							onTogglePreserve={handleTogglePreserveEvent}
+							notificationPreference={activeEventNotificationPref}
+							notificationOptions={NOTIFICATION_OPTIONS}
+							onToggleNotificationEnabled={handleToggleEventNotifications}
+							onToggleNotificationTiming={handleToggleEventNotificationTiming}
+							notificationSupported={webPushSupported}
+							notificationSupportHint={webPushSupport.message}
+							notificationPermission={notificationPermission}
+							notificationError={notificationError}
+						/>
+					</div>
+				</div>
+			) : null}
 
 			<EventComposerModal
 				key={`${selectedDayISO}-${editingEvent?.id || "new"}-${isComposerOpen ? "open" : "closed"}`}

@@ -1,6 +1,3 @@
--- Run in Supabase SQL Editor
--- Adds a flag to keep selected past events from automatic cleanup
-
 alter table public.shared_calendar_events
 add column if not exists preserve_forever boolean;
 
