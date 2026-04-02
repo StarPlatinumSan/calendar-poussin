@@ -6,7 +6,20 @@ const DEFAULT_OWNER = {
 	city: "",
 };
 
-export default function EventDetailsPanel({ event, onEdit, onDelete, onTogglePreserve, notificationPreference, notificationOptions, onToggleNotificationEnabled, onToggleNotificationTiming, notificationSupported, notificationSupportHint, notificationPermission, notificationError }) {
+export default function EventDetailsPanel({
+	event,
+	onEdit,
+	onDelete,
+	onTogglePreserve,
+	notificationPreference,
+	notificationOptions,
+	onToggleNotificationEnabled,
+	onToggleNotificationTiming,
+	notificationSupported,
+	notificationSupportHint,
+	notificationPermission,
+	notificationError,
+}) {
 	if (!event) {
 		return (
 			<aside className="details-panel">
@@ -47,7 +60,7 @@ export default function EventDetailsPanel({ event, onEdit, onDelete, onTogglePre
 			<div className="details-panel__preserve">
 				<label className="details-panel__checkbox">
 					<input type="checkbox" checked={Boolean(event.preserveForever)} onChange={(changeEvent) => onTogglePreserve(event.id, changeEvent.target.checked)} />
-					Conserver ce bloc (ne pas supprimer automatiquement apres 30 jours)
+					Préserver ce bloc pour toujours
 				</label>
 			</div>
 			<section className="details-panel__notifications">
