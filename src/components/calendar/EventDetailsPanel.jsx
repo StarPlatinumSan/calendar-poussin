@@ -16,7 +16,6 @@ export default function EventDetailsPanel({
 	onToggleNotificationTiming,
 	notificationSupported,
 	notificationPermission,
-	notificationOwnerLabel,
 	notificationError,
 }) {
 	if (!event) {
@@ -30,6 +29,7 @@ export default function EventDetailsPanel({
 
 	const owner = USERS[event.createdBy] || DEFAULT_OWNER;
 	const dayISO = formatDayKeyInZone(event.startUTC, USERS.canada.zone);
+	const isNotificationEnabled = Boolean(notificationPreference?.enabled);
 
 	return (
 		<aside className="details-panel">
@@ -57,34 +57,35 @@ export default function EventDetailsPanel({
 			</div>
 			<section className="details-panel__notifications">
 				<h4>Rappels</h4>
-				<p>Compte: {notificationOwnerLabel}</p>
 				{!notificationSupported ? (
 					<p>Les notifications ne sont pas disponibles dans ce navigateur.</p>
 				) : (
 					<>
-						<label className="details-panel__checkbox">
-							<input
-								type="checkbox"
-								checked={Boolean(notificationPreference?.enabled)}
-								onChange={(changeEvent) => onToggleNotificationEnabled(event.id, changeEvent.target.checked)}
-							/>
-							Recevoir la notification
-						</label>
+						{!isNotificationEnabled ? (
+							<button type="button" className="primary-btn details-panel__notify-btn" onClick={() => onToggleNotificationEnabled(event.id, true)}>
+								<strong>Recevoir la notification</strong>
+							</button>
+						) : (
+							<>
+								<button type="button" className="secondary-btn details-panel__notify-btn" onClick={() => onToggleNotificationEnabled(event.id, false)}>
+									Ne plus recevoir la notification
+								</button>
+								<div className="details-panel__notification-options">
+									{notificationOptions.map((option) => (
+										<label key={option.id} className="details-panel__checkbox">
+											<input
+												type="checkbox"
+												checked={Boolean(notificationPreference?.timings?.includes(option.id))}
+												onChange={(changeEvent) => onToggleNotificationTiming(event.id, option.id, changeEvent.target.checked)}
+											/>
+											{option.label}
+										</label>
+									))}
+								</div>
+							</>
+						)}
 						{notificationPermission === "denied" ? <p>Permission refusee. Autorise les notifications dans ton navigateur.</p> : null}
 						{notificationError ? <p>{notificationError}</p> : null}
-						<div className="details-panel__notification-options">
-							{notificationOptions.map((option) => (
-								<label key={option.id} className="details-panel__checkbox">
-									<input
-										type="checkbox"
-										checked={Boolean(notificationPreference?.timings?.includes(option.id))}
-										disabled={!notificationPreference?.enabled}
-										onChange={(changeEvent) => onToggleNotificationTiming(event.id, option.id, changeEvent.target.checked)}
-									/>
-									{option.label}
-								</label>
-							))}
-						</div>
 					</>
 				)}
 			</section>

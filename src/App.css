@@ -487,6 +487,11 @@ body {
 	font-size: 0.95rem;
 }
 
+.details-panel__notify-btn {
+	align-self: flex-start;
+	font-weight: 800;
+}
+
 .details-panel__checkbox {
 	display: inline-flex;
 	align-items: center;

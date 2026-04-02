@@ -22,7 +22,7 @@ const NOTIFICATION_OPTIONS = [
 	{ id: "2d", label: "2 jours avant" },
 	{ id: "1d", label: "1 jour avant" },
 	{ id: "1h", label: "1 heure avant" },
-	{ id: "0m", label: "Au moment meme" },
+	{ id: "0m", label: "Au moment" },
 ];
 const DEFAULT_NOTIFICATION_TIMINGS = ["1h", "0m"];
 
@@ -232,25 +232,22 @@ export default function SharedCalendar({ user, onLogout }) {
 		return pref.enabled || pref.timings.length > 0 ? pref : { enabled: false, timings: DEFAULT_NOTIFICATION_TIMINGS };
 	}, [activeEvent?.id, notificationPrefs]);
 
-	const persistNotificationPreference = useCallback(
-		async (eventId, enabled, timings) => {
-			const response = await apiFetch(`/api/reminders/preferences/${eventId}`, {
-				method: "PUT",
-				body: {
-					enabled,
-					timings,
-				},
-			});
+	const persistNotificationPreference = useCallback(async (eventId, enabled, timings) => {
+		const response = await apiFetch(`/api/reminders/preferences/${eventId}`, {
+			method: "PUT",
+			body: {
+				enabled,
+				timings,
+			},
+		});
 
-			const nextPreference = normalizeNotificationPref(response?.preference);
-			setNotificationPrefs((current) => ({
-				...current,
-				[eventId]: nextPreference,
-			}));
-			setNotificationError("");
-		},
-		[],
-	);
+		const nextPreference = normalizeNotificationPref(response?.preference);
+		setNotificationPrefs((current) => ({
+			...current,
+			[eventId]: nextPreference,
+		}));
+		setNotificationError("");
+	}, []);
 
 	const handleToggleEventNotifications = async (eventId, enabled) => {
 		const existing = normalizeNotificationPref(notificationPrefs[eventId]);
@@ -331,11 +328,11 @@ export default function SharedCalendar({ user, onLogout }) {
 			? await apiFetch(`/api/events/${editingEvent.id}`, {
 					method: "PUT",
 					body: payload,
-			  })
+				})
 			: await apiFetch("/api/events", {
 					method: "POST",
 					body: payload,
-			  });
+				});
 		const savedEvent = response?.event;
 
 		if (!savedEvent) {
@@ -453,7 +450,6 @@ export default function SharedCalendar({ user, onLogout }) {
 							onToggleNotificationTiming={handleToggleEventNotificationTiming}
 							notificationSupported={webPushSupported}
 							notificationPermission={notificationPermission}
-							notificationOwnerLabel={user?.displayName || "Compte connecte"}
 							notificationError={notificationError}
 						/>
 
