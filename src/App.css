@@ -570,12 +570,62 @@ body {
 	display: grid;
 	place-items: center;
 	padding: 14px;
+	animation: mobile-overlay-fade-in 0.18s ease;
+}
+
+.mobile-event-overlay--closing {
+	animation: mobile-overlay-fade-out 0.18s ease forwards;
 }
 
 .mobile-event-overlay__dialog {
 	width: min(560px, 100%);
 	max-height: min(86vh, 760px);
 	overflow: auto;
+	animation: mobile-overlay-dialog-in 0.18s ease;
+}
+
+.mobile-event-overlay--closing .mobile-event-overlay__dialog {
+	animation: mobile-overlay-dialog-out 0.18s ease forwards;
+}
+
+@keyframes mobile-overlay-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes mobile-overlay-fade-out {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes mobile-overlay-dialog-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px) scale(0.985);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes mobile-overlay-dialog-out {
+	from {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(6px) scale(0.99);
+	}
 }
 
 @keyframes mobile-day-enter-next {

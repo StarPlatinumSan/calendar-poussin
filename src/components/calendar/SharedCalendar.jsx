@@ -18,6 +18,7 @@ const DEFAULT_DAY = getCurrentDayISO();
 const configuredApiBaseUrl = (import.meta.env.VITE_API_URL || "").trim();
 const isConfiguredApiLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredApiBaseUrl);
 const API_BASE_URL = import.meta.env.DEV ? configuredApiBaseUrl || "http://localhost:4000" : isConfiguredApiLocalhost ? "" : configuredApiBaseUrl;
+const MOBILE_OVERLAY_CLOSE_DURATION_MS = 180;
 const NOTIFICATION_OPTIONS = [
 	{ id: "2d", label: "2 jours avant" },
 	{ id: "1d", label: "1 jour avant" },
@@ -141,9 +142,12 @@ export default function SharedCalendar({ user, onLogout }) {
 	const [notificationPermission, setNotificationPermission] = useState(() => (typeof window !== "undefined" && "Notification" in window ? Notification.permission : "unsupported"));
 	const [notificationError, setNotificationError] = useState("");
 	const [webPushSupport, setWebPushSupport] = useState(() => getWebPushSupportStatus());
+	const [mobileOverlayEvent, setMobileOverlayEvent] = useState(null);
+	const [isMobileOverlayClosing, setIsMobileOverlayClosing] = useState(false);
 	const isMobile = useIsMobile(900);
 	const serviceWorkerRegistrationRef = useRef(null);
 	const vapidPublicKeyRef = useRef("");
+	const mobileOverlayCloseTimeoutRef = useRef(null);
 	const webPushSupported = webPushSupport.supported;
 
 	const ensurePushSubscription = useCallback(
@@ -268,6 +272,41 @@ export default function SharedCalendar({ user, onLogout }) {
 			ensurePushSubscription({ requestPermission: false });
 		}
 	}, [ensurePushSubscription]);
+
+	useEffect(() => {
+		return () => {
+			window.clearTimeout(mobileOverlayCloseTimeoutRef.current);
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!isMobile) {
+			window.clearTimeout(mobileOverlayCloseTimeoutRef.current);
+			setIsMobileOverlayClosing(false);
+			setMobileOverlayEvent(null);
+			return;
+		}
+
+		const shouldOpenOverlay = Boolean(activeEvent) && !isComposerOpen;
+
+		if (shouldOpenOverlay) {
+			window.clearTimeout(mobileOverlayCloseTimeoutRef.current);
+			setIsMobileOverlayClosing(false);
+			setMobileOverlayEvent(activeEvent);
+			return;
+		}
+
+		if (!mobileOverlayEvent || isMobileOverlayClosing) {
+			return;
+		}
+
+		setIsMobileOverlayClosing(true);
+		window.clearTimeout(mobileOverlayCloseTimeoutRef.current);
+		mobileOverlayCloseTimeoutRef.current = window.setTimeout(() => {
+			setIsMobileOverlayClosing(false);
+			setMobileOverlayEvent(null);
+		}, MOBILE_OVERLAY_CLOSE_DURATION_MS);
+	}, [activeEvent, isComposerOpen, isMobile, isMobileOverlayClosing, mobileOverlayEvent]);
 
 	const sharedFreeWindows = useMemo(() => getSharedFreeWindows(events, selectedDayISO, PRIMARY_ZONE), [events, selectedDayISO]);
 	const dayEvents = useMemo(() => eventsForDay(events, selectedDayISO, PRIMARY_ZONE), [events, selectedDayISO]);
@@ -452,8 +491,12 @@ export default function SharedCalendar({ user, onLogout }) {
 		setIsDesktopDayLocked(true);
 	};
 
+	const handleCloseMobileOverlay = () => {
+		setActiveEvent(null);
+	};
+
 	const isDayLocked = !isMobile && isDesktopDayLocked;
-	const showMobileEventOverlay = isMobile && Boolean(activeEvent) && !isComposerOpen;
+	const showMobileEventOverlay = isMobile && Boolean(mobileOverlayEvent);
 
 	return (
 		<div className="app-shell">
@@ -584,10 +627,10 @@ export default function SharedCalendar({ user, onLogout }) {
 			</div>
 
 			{showMobileEventOverlay ? (
-				<div className="mobile-event-overlay" onClick={() => setActiveEvent(null)} role="presentation">
+				<div className={`mobile-event-overlay${isMobileOverlayClosing ? " mobile-event-overlay--closing" : ""}`} onClick={handleCloseMobileOverlay} role="presentation">
 					<div className="mobile-event-overlay__dialog" onClick={(event) => event.stopPropagation()} role="presentation">
 						<EventDetailsPanel
-							event={activeEvent}
+							event={mobileOverlayEvent}
 							onEdit={handleEdit}
 							onDelete={handleDeleteEvent}
 							onTogglePreserve={handleTogglePreserveEvent}
