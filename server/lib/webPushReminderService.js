@@ -2,7 +2,7 @@ const TIMING_OPTIONS = [
 	{ id: "2d", label: "2 jours avant", offsetMs: 2 * 24 * 60 * 60 * 1000 },
 	{ id: "1d", label: "1 jour avant", offsetMs: 24 * 60 * 60 * 1000 },
 	{ id: "1h", label: "1 heure avant", offsetMs: 60 * 60 * 1000 },
-	{ id: "0m", label: "Au moment", offsetMs: 0 },
+	{ id: "0m", label: "Début", offsetMs: 0 },
 ];
 const SEND_TOLERANCE_MS = 5 * 1000;
 

@@ -24,7 +24,7 @@ const NOTIFICATION_OPTIONS = [
 	{ id: "1h", label: "1 heure avant" },
 	{ id: "0m", label: "Au moment" },
 ];
-const DEFAULT_NOTIFICATION_TIMINGS = ["1h", "0m"];
+const DEFAULT_NOTIFICATION_TIMINGS = ["0m"];
 
 function isWebPushSupported() {
 	return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;

@@ -230,24 +230,12 @@ app.post("/api/push/subscribe", requireAuth, async (req, res) => {
 		return res.status(400).json({ error: "Missing authenticated user id" });
 	}
 
-	if (
-		!subscription ||
-		typeof subscription.endpoint !== "string" ||
-		!subscription.endpoint ||
-		typeof subscription?.keys?.p256dh !== "string" ||
-		!subscription.keys.p256dh ||
-		typeof subscription?.keys?.auth !== "string" ||
-		!subscription.keys.auth
-	) {
+	if (!subscription || typeof subscription.endpoint !== "string" || !subscription.endpoint || typeof subscription?.keys?.p256dh !== "string" || !subscription.keys.p256dh || typeof subscription?.keys?.auth !== "string" || !subscription.keys.auth) {
 		return res.status(400).json({ error: "Invalid push subscription payload" });
 	}
 
 	try {
-		await pushSubscriptionsRepository.upsertSubscription(
-			userId,
-			subscription,
-			req.get("user-agent"),
-		);
+		await pushSubscriptionsRepository.upsertSubscription(userId, subscription, req.get("user-agent"));
 
 		return res.status(204).send();
 	} catch (error) {
@@ -291,9 +279,7 @@ app.put("/api/reminders/preferences/:eventId", requireAuth, async (req, res) => 
 	const userId = getCurrentUserId(req);
 	const eventId = req.params.eventId;
 	const enabled = Boolean(req.body?.enabled);
-	const timings = Array.isArray(req.body?.timings)
-		? req.body.timings.filter((timingId) => ALLOWED_REMINDER_TIMINGS.has(timingId))
-		: [];
+	const timings = Array.isArray(req.body?.timings) ? req.body.timings.filter((timingId) => ALLOWED_REMINDER_TIMINGS.has(timingId)) : [];
 
 	if (!userId) {
 		return res.status(400).json({ error: "Missing authenticated user id" });
@@ -308,12 +294,7 @@ app.put("/api/reminders/preferences/:eventId", requireAuth, async (req, res) => 
 	}
 
 	try {
-		const preference = await eventReminderPreferencesRepository.setPreference(
-			userId,
-			eventId,
-			enabled,
-			timings,
-		);
+		const preference = await eventReminderPreferencesRepository.setPreference(userId, eventId, enabled, timings);
 
 		return res.json({ preference });
 	} catch (error) {
@@ -368,7 +349,7 @@ if (HAS_WEB_PUSH_CONFIG) {
 		reminderDeliveryLogRepository,
 		sharedCalendarEventsRepository,
 		pushSubscriptionsRepository,
-		intervalMs: 30 * 1000,
+		intervalMs: 1 * 10 * 1000,
 	});
 }
 
