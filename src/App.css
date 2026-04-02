@@ -473,6 +473,10 @@ body {
 	margin-top: 12px;
 }
 
+.details-panel__preserve {
+	margin-top: 10px;
+}
+
 .details-panel__notifications {
 	margin-top: 14px;
 	padding-top: 12px;

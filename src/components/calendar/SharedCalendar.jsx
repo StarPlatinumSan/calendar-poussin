@@ -366,6 +366,22 @@ export default function SharedCalendar({ user, onLogout }) {
 		setIsComposerOpen(false);
 	};
 
+	const handleTogglePreserveEvent = async (eventId, preserveForever) => {
+		const response = await apiFetch(`/api/events/${eventId}`, {
+			method: "PUT",
+			body: { preserveForever },
+		});
+		const savedEvent = response?.event;
+
+		if (!savedEvent) {
+			return;
+		}
+
+		setEvents((current) => current.map((item) => (item.id === savedEvent.id ? savedEvent : item)));
+		setActiveEvent((current) => (current?.id === savedEvent.id ? savedEvent : current));
+		setEditingEvent((current) => (current?.id === savedEvent.id ? savedEvent : current));
+	};
+
 	const handleSaveEvent = async (event) => {
 		const payload = {
 			title: event.title,
@@ -493,6 +509,7 @@ export default function SharedCalendar({ user, onLogout }) {
 							event={activeEvent}
 							onEdit={handleEdit}
 							onDelete={handleDeleteEvent}
+							onTogglePreserve={handleTogglePreserveEvent}
 							notificationPreference={activeEventNotificationPref}
 							notificationOptions={NOTIFICATION_OPTIONS}
 							onToggleNotificationEnabled={handleToggleEventNotifications}

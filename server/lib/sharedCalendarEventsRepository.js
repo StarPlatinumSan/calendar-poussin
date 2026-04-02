@@ -13,6 +13,7 @@ function mapRowToEvent(row) {
 		startUTC: row.start_utc,
 		endUTC: row.end_utc,
 		createdBy: row.created_by,
+		preserveForever: Boolean(row.preserve_forever),
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	}
@@ -39,6 +40,10 @@ function mapPayloadToRow(payload) {
 
 	if (payload.createdBy !== undefined) {
 		row.created_by = payload.createdBy
+	}
+
+	if (payload.preserveForever !== undefined) {
+		row.preserve_forever = Boolean(payload.preserveForever)
 	}
 
 	return row
@@ -108,6 +113,7 @@ async function deleteEventsEndedBefore(cutoffUtcISO) {
 		.from(TABLE_NAME)
 		.delete()
 		.lt('end_utc', cutoffUtcISO)
+		.eq('preserve_forever', false)
 		.select('id')
 
 	if (error) {

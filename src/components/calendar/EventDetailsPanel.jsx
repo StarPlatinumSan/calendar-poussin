@@ -6,7 +6,7 @@ const DEFAULT_OWNER = {
 	city: "",
 };
 
-export default function EventDetailsPanel({ event, onEdit, onDelete, notificationPreference, notificationOptions, onToggleNotificationEnabled, onToggleNotificationTiming, notificationSupported, notificationSupportHint, notificationPermission, notificationError }) {
+export default function EventDetailsPanel({ event, onEdit, onDelete, onTogglePreserve, notificationPreference, notificationOptions, onToggleNotificationEnabled, onToggleNotificationTiming, notificationSupported, notificationSupportHint, notificationPermission, notificationError }) {
 	if (!event) {
 		return (
 			<aside className="details-panel">
@@ -43,6 +43,12 @@ export default function EventDetailsPanel({ event, onEdit, onDelete, notificatio
 				<button type="button" className="danger-btn" onClick={() => onDelete(event.id)}>
 					Supprimer
 				</button>
+			</div>
+			<div className="details-panel__preserve">
+				<label className="details-panel__checkbox">
+					<input type="checkbox" checked={Boolean(event.preserveForever)} onChange={(changeEvent) => onTogglePreserve(event.id, changeEvent.target.checked)} />
+					Conserver ce bloc (ne pas supprimer automatiquement apres 30 jours)
+				</label>
 			</div>
 			<section className="details-panel__notifications">
 				<h4>Rappels</h4>
