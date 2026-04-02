@@ -6,7 +6,19 @@ const DEFAULT_OWNER = {
 	city: "",
 };
 
-export default function EventDetailsPanel({ event, onEdit, onDelete }) {
+export default function EventDetailsPanel({
+	event,
+	onEdit,
+	onDelete,
+	notificationPreference,
+	notificationOptions,
+	onToggleNotificationEnabled,
+	onToggleNotificationTiming,
+	notificationSupported,
+	notificationPermission,
+	notificationOwnerLabel,
+	notificationError,
+}) {
 	if (!event) {
 		return (
 			<aside className="details-panel">
@@ -43,6 +55,39 @@ export default function EventDetailsPanel({ event, onEdit, onDelete }) {
 					Supprimer
 				</button>
 			</div>
+			<section className="details-panel__notifications">
+				<h4>Rappels</h4>
+				<p>Compte: {notificationOwnerLabel}</p>
+				{!notificationSupported ? (
+					<p>Les notifications ne sont pas disponibles dans ce navigateur.</p>
+				) : (
+					<>
+						<label className="details-panel__checkbox">
+							<input
+								type="checkbox"
+								checked={Boolean(notificationPreference?.enabled)}
+								onChange={(changeEvent) => onToggleNotificationEnabled(event.id, changeEvent.target.checked)}
+							/>
+							Recevoir la notification
+						</label>
+						{notificationPermission === "denied" ? <p>Permission refusee. Autorise les notifications dans ton navigateur.</p> : null}
+						{notificationError ? <p>{notificationError}</p> : null}
+						<div className="details-panel__notification-options">
+							{notificationOptions.map((option) => (
+								<label key={option.id} className="details-panel__checkbox">
+									<input
+										type="checkbox"
+										checked={Boolean(notificationPreference?.timings?.includes(option.id))}
+										disabled={!notificationPreference?.enabled}
+										onChange={(changeEvent) => onToggleNotificationTiming(event.id, option.id, changeEvent.target.checked)}
+									/>
+									{option.label}
+								</label>
+							))}
+						</div>
+					</>
+				)}
+			</section>
 		</aside>
 	);
 }

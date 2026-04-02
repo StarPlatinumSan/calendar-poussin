@@ -4,25 +4,35 @@ import express from "express";
 import session from "express-session";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import webPush from "web-push";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import eventReminderPreferencesRepository from "./lib/eventReminderPreferencesRepository.js";
+import pushSubscriptionsRepository from "./lib/pushSubscriptionsRepository.js";
+import reminderDeliveryLogRepository from "./lib/reminderDeliveryLogRepository.js";
 import sharedCalendarEventsRepository from "./lib/sharedCalendarEventsRepository.js";
+import { startWebPushReminderScheduler, TIMING_OPTIONS } from "./lib/webPushReminderService.js";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || (IS_PRODUCTION ? "" : "http://localhost:5173");
 const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || "";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const DIST_PATH = path.resolve(__dirname, "../dist");
 const LOCAL_HOST_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 const IS_LOCAL_PRODUCTION = IS_PRODUCTION && (LOCAL_HOST_PATTERN.test(CLIENT_ORIGIN) || LOCAL_HOST_PATTERN.test(GOOGLE_CALLBACK_URL));
 const USE_SECURE_COOKIES = IS_PRODUCTION && !IS_LOCAL_PRODUCTION;
 const COOKIE_SAME_SITE = USE_SECURE_COOKIES ? "none" : "lax";
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "";
+const HAS_WEB_PUSH_CONFIG = Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && VAPID_SUBJECT);
+const ALLOWED_REMINDER_TIMINGS = new Set(TIMING_OPTIONS.map((option) => option.id));
 
 const requiredEnvVars = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_CALLBACK_URL", "SESSION_SECRET", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
 
@@ -31,6 +41,12 @@ const missingEnvVars = requiredEnvVars.filter((name) => !process.env[name]);
 if (missingEnvVars.length > 0) {
 	console.error(`Missing environment variables: ${missingEnvVars.join(", ")}`);
 	process.exit(1);
+}
+
+if (HAS_WEB_PUSH_CONFIG) {
+	webPush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+} else {
+	console.warn("[web-push] disabled: missing VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT");
 }
 
 if (CLIENT_ORIGIN) {
@@ -94,6 +110,8 @@ const requireAuth = (req, res, next) => {
 
 	return next();
 };
+
+const getCurrentUserId = (req) => req.user?.id || req.user?.email || null;
 
 app.get("/health", (_req, res) => {
 	res.json({ ok: true });
@@ -192,6 +210,129 @@ app.delete("/api/events/:id", requireAuth, async (req, res) => {
 	return res.status(204).send();
 });
 
+app.get("/api/push/public-key", requireAuth, (_req, res) => {
+	if (!HAS_WEB_PUSH_CONFIG) {
+		return res.status(503).json({ error: "Web push is not configured" });
+	}
+
+	return res.json({ publicKey: VAPID_PUBLIC_KEY });
+});
+
+app.post("/api/push/subscribe", requireAuth, async (req, res) => {
+	if (!HAS_WEB_PUSH_CONFIG) {
+		return res.status(503).json({ error: "Web push is not configured" });
+	}
+
+	const userId = getCurrentUserId(req);
+	const subscription = req.body?.subscription;
+
+	if (!userId) {
+		return res.status(400).json({ error: "Missing authenticated user id" });
+	}
+
+	if (
+		!subscription ||
+		typeof subscription.endpoint !== "string" ||
+		!subscription.endpoint ||
+		typeof subscription?.keys?.p256dh !== "string" ||
+		!subscription.keys.p256dh ||
+		typeof subscription?.keys?.auth !== "string" ||
+		!subscription.keys.auth
+	) {
+		return res.status(400).json({ error: "Invalid push subscription payload" });
+	}
+
+	try {
+		await pushSubscriptionsRepository.upsertSubscription(
+			userId,
+			subscription,
+			req.get("user-agent"),
+		);
+
+		return res.status(204).send();
+	} catch (error) {
+		console.error("[api/push/subscribe][POST] failed", JSON.stringify(error, null, 2));
+		return res.status(500).json({ error: "Failed to save push subscription" });
+	}
+});
+
+app.post("/api/push/unsubscribe", requireAuth, async (req, res) => {
+	const endpoint = req.body?.endpoint;
+
+	if (typeof endpoint !== "string" || !endpoint) {
+		return res.status(400).json({ error: "Missing endpoint" });
+	}
+
+	try {
+		await pushSubscriptionsRepository.deleteByEndpoint(endpoint);
+		return res.status(204).send();
+	} catch (error) {
+		console.error("[api/push/unsubscribe][POST] failed", JSON.stringify(error, null, 2));
+		return res.status(500).json({ error: "Failed to remove push subscription" });
+	}
+});
+
+app.get("/api/reminders/preferences", requireAuth, async (req, res) => {
+	const userId = getCurrentUserId(req);
+	if (!userId) {
+		return res.status(400).json({ error: "Missing authenticated user id" });
+	}
+
+	try {
+		const preferences = await eventReminderPreferencesRepository.listByUserId(userId);
+		return res.json({ preferences });
+	} catch (error) {
+		console.error("[api/reminders/preferences][GET] failed", JSON.stringify(error, null, 2));
+		return res.status(500).json({ error: "Failed to load reminder preferences" });
+	}
+});
+
+app.put("/api/reminders/preferences/:eventId", requireAuth, async (req, res) => {
+	const userId = getCurrentUserId(req);
+	const eventId = req.params.eventId;
+	const enabled = Boolean(req.body?.enabled);
+	const timings = Array.isArray(req.body?.timings)
+		? req.body.timings.filter((timingId) => ALLOWED_REMINDER_TIMINGS.has(timingId))
+		: [];
+
+	if (!userId) {
+		return res.status(400).json({ error: "Missing authenticated user id" });
+	}
+
+	if (!eventId || typeof eventId !== "string") {
+		return res.status(400).json({ error: "Invalid event id" });
+	}
+
+	if (enabled && timings.length === 0) {
+		return res.status(400).json({ error: "At least one timing is required when reminders are enabled" });
+	}
+
+	try {
+		const preference = await eventReminderPreferencesRepository.setPreference(
+			userId,
+			eventId,
+			enabled,
+			timings,
+		);
+
+		return res.json({ preference });
+	} catch (error) {
+		console.error("[api/reminders/preferences][PUT] failed", JSON.stringify(error, null, 2));
+
+		if (error?.code || error?.details || error?.hint) {
+			return res.status(400).json({
+				error: "Reminder preference update failed",
+				message: error?.message ?? null,
+				code: error?.code ?? null,
+				details: error?.details ?? null,
+				hint: error?.hint ?? null,
+			});
+		}
+
+		return res.status(500).json({ error: "Internal server error" });
+	}
+});
+
 app.post("/auth/logout", (req, res, next) => {
 	req.logout((logoutError) => {
 		if (logoutError) {
@@ -217,6 +358,17 @@ if (IS_PRODUCTION && fs.existsSync(DIST_PATH)) {
 	app.use(express.static(DIST_PATH));
 	app.get(/^\/(?!api|auth|health).*/, (_req, res) => {
 		res.sendFile(path.join(DIST_PATH, "index.html"));
+	});
+}
+
+if (HAS_WEB_PUSH_CONFIG) {
+	startWebPushReminderScheduler({
+		webPush,
+		reminderPreferencesRepository: eventReminderPreferencesRepository,
+		reminderDeliveryLogRepository,
+		sharedCalendarEventsRepository,
+		pushSubscriptionsRepository,
+		intervalMs: 5 * 60 * 1000,
 	});
 }
 

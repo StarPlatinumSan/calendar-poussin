@@ -473,6 +473,34 @@ body {
 	margin-top: 12px;
 }
 
+.details-panel__notifications {
+	margin-top: 14px;
+	padding-top: 12px;
+	border-top: 1px dashed var(--border-soft);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.details-panel__notifications h4 {
+	margin: 0;
+	font-size: 0.95rem;
+}
+
+.details-panel__checkbox {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.87rem;
+	color: #663f53;
+}
+
+.details-panel__notification-options {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
 .availability-panel ul {
 	list-style: none;
 	padding: 0;

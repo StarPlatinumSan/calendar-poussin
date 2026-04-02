@@ -54,6 +54,23 @@ async function listEvents() {
 	return (data || []).map(mapRowToEvent)
 }
 
+async function listEventsByIds(ids = []) {
+	if (!Array.isArray(ids) || ids.length === 0) {
+		return []
+	}
+
+	const { data, error } = await supabase
+		.from(TABLE_NAME)
+		.select('*')
+		.in('id', ids)
+
+	if (error) {
+		throw error
+	}
+
+	return (data || []).map(mapRowToEvent)
+}
+
 async function createEvent(payload) {
 	const rowPayload = mapPayloadToRow(payload)
 
@@ -88,6 +105,7 @@ async function deleteEvent(id) {
 
 export default {
 	listEvents,
+	listEventsByIds,
 	createEvent,
 	updateEvent,
 	deleteEvent,
