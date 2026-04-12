@@ -161,9 +161,9 @@ export default function MobileDayView({
 
 					const top = (event.position.startMinute / 1440) * 100;
 					const height = Math.max(((event.position.endMinute - event.position.startMinute) / 1440) * 100, 3);
-					const usableWidth = `100% - ${TIMELINE_EVENT_LEFT_PX + TIMELINE_EVENT_RIGHT_PX}px`;
-					const width = `calc((${usableWidth} / ${event.laneCount}) - 4px)`;
-					const left = `calc(${TIMELINE_EVENT_LEFT_PX}px + ((${usableWidth} / ${event.laneCount}) * ${event.laneIndex}) + 2px)`;
+					const timelineContentWidth = `100% - ${TIMELINE_EVENT_LEFT_PX + TIMELINE_EVENT_RIGHT_PX}px`;
+					const width = `calc((${timelineContentWidth}) / ${event.laneCount})`;
+					const left = `calc(${TIMELINE_EVENT_LEFT_PX}px + ((${timelineContentWidth}) / ${event.laneCount}) * ${event.laneIndex})`;
 
 					return (
 						<button
