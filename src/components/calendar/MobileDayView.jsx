@@ -5,8 +5,62 @@ import { clipEventToDay, eventsForDay, formatRangeInZone } from "../../utils/dat
 const HOURS = Array.from({ length: 24 }, (_value, index) => index);
 const SWIPE_THRESHOLD_PX = 90;
 const SWIPE_HORIZONTAL_RATIO = 1.2;
+const TIMELINE_EVENT_LEFT_PX = 44;
+const TIMELINE_EVENT_RIGHT_PX = 10;
 
-export default function MobileDayView({ dayISO, events, sharedFreeWindows, onShiftDay, onSelectEvent, onOpenCreateForDay, enableSwipe = true, hintText = "Glisse à gauche/droite pour changer de jour" }) {
+function assignEventLanes(eventsWithPosition) {
+	const sorted = [...eventsWithPosition]
+		.filter((event) => event.position)
+		.sort((left, right) => left.position.startMinute - right.position.startMinute || left.position.endMinute - right.position.endMinute);
+	const laneAssignments = new Map();
+	let index = 0;
+
+	while (index < sorted.length) {
+		const cluster = [sorted[index]];
+		let clusterEnd = sorted[index].position.endMinute;
+		index += 1;
+
+		while (index < sorted.length && sorted[index].position.startMinute < clusterEnd) {
+			cluster.push(sorted[index]);
+			clusterEnd = Math.max(clusterEnd, sorted[index].position.endMinute);
+			index += 1;
+		}
+
+		const laneEndMinutes = [];
+		for (const event of cluster) {
+			let laneIndex = laneEndMinutes.findIndex((laneEndMinute) => laneEndMinute <= event.position.startMinute);
+			if (laneIndex === -1) {
+				laneEndMinutes.push(event.position.endMinute);
+				laneIndex = laneEndMinutes.length - 1;
+			} else {
+				laneEndMinutes[laneIndex] = event.position.endMinute;
+			}
+			laneAssignments.set(event.id, laneIndex);
+		}
+
+		const laneCount = Math.max(laneEndMinutes.length, 1);
+		for (const event of cluster) {
+			const laneIndex = laneAssignments.get(event.id) ?? 0;
+			laneAssignments.set(event.id, { laneIndex, laneCount });
+		}
+	}
+
+	return eventsWithPosition.map((event) => ({
+		...event,
+		...(laneAssignments.get(event.id) || { laneIndex: 0, laneCount: 1 }),
+	}));
+}
+
+export default function MobileDayView({
+	dayISO,
+	events,
+	sharedFreeWindows,
+	onShiftDay,
+	onSelectEvent,
+	onOpenCreateForDay,
+	enableSwipe = true,
+	hintText = "Glisse à gauche/droite pour changer de jour",
+}) {
 	const touchStartRef = useRef(null);
 	const swipeDirectionRef = useRef(0);
 	const animationTimeoutRef = useRef(null);
@@ -16,6 +70,7 @@ export default function MobileDayView({ dayISO, events, sharedFreeWindows, onShi
 		...event,
 		position: clipEventToDay(event, dayISO, PRIMARY_ZONE),
 	}));
+	const laidOutDayEvents = assignEventLanes(dayEvents);
 
 	useEffect(() => {
 		if (!swipeDirectionRef.current) {
@@ -99,16 +154,32 @@ export default function MobileDayView({ dayISO, events, sharedFreeWindows, onShi
 					/>
 				))}
 
-				{dayEvents.map((event) => {
+				{laidOutDayEvents.map((event) => {
 					if (!event.position) {
 						return null;
 					}
 
 					const top = (event.position.startMinute / 1440) * 100;
 					const height = Math.max(((event.position.endMinute - event.position.startMinute) / 1440) * 100, 3);
+					const usableWidth = `100% - ${TIMELINE_EVENT_LEFT_PX + TIMELINE_EVENT_RIGHT_PX}px`;
+					const width = `calc((${usableWidth} / ${event.laneCount}) - 4px)`;
+					const left = `calc(${TIMELINE_EVENT_LEFT_PX}px + ((${usableWidth} / ${event.laneCount}) * ${event.laneIndex}) + 2px)`;
 
 					return (
-						<button key={event.id} type="button" className={`timeline-event timeline-event--${event.createdBy}`} style={{ top: `${top}%`, height: `${height}%` }} onClick={() => onSelectEvent(event)}>
+						<button
+							key={event.id}
+							type="button"
+							className={`timeline-event timeline-event--${event.createdBy}`}
+							style={{
+								top: `${top}%`,
+								height: `${height}%`,
+								left,
+								width,
+								right: "auto",
+								zIndex: event.laneIndex + 1,
+							}}
+							onClick={() => onSelectEvent(event)}
+						>
 							<strong>{event.title}</strong>
 							<small>
 								{USERS.canada.flag} Montréal : {formatRangeInZone(event.startUTC, event.endUTC, USERS.canada.zone)}
