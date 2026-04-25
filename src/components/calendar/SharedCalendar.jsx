@@ -530,7 +530,7 @@ export default function SharedCalendar({ user, onLogout }) {
 									setIsComposerOpen(true);
 								}}
 								enableSwipe={isMobile}
-								hintText={isMobile ? "Glisse a gauche/droite pour changer de jour" : "Vue verrouillee heure par heure"}
+								hintText={isMobile ? "Glisse à gauche/droite pour changer de jour" : "Vue verrouillee heure par heure"}
 							/>
 						) : (
 							<DesktopMonthView
