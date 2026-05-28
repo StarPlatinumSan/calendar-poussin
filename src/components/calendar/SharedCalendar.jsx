@@ -113,7 +113,11 @@ async function apiFetch(path, { method = "GET", body } = {}) {
 
 		try {
 			const payload = await response.json();
-			errorMessage = payload?.error || payload?.message || errorMessage;
+			if (payload?.error && payload?.message) {
+				errorMessage = `${payload.error}: ${payload.message}`;
+			} else {
+				errorMessage = payload?.message || payload?.error || errorMessage;
+			}
 		} catch {
 			// Keep the generic message if the body is not JSON.
 		}
