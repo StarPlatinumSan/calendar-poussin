@@ -2,32 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { USERS } from "../../constants/timezones";
 import { formatRangeInZone, getDurationLabel, toLocalDateTimeParts, toUtcIsoFromLocal } from "../../utils/dateTime";
 
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
 function getSourceZone(createdBy) {
 	return USERS[createdBy]?.zone || USERS.canada.zone;
-}
-
-function parsePastedDates(rawText) {
-	const tokens = rawText
-		.split(/[\s,;,]+/)
-		.map((token) => token.trim())
-		.filter(Boolean);
-	const uniqueDates = [];
-	const seenDates = new Set();
-
-	for (const token of tokens) {
-		if (!ISO_DATE_PATTERN.test(token)) {
-			return { dates: [], invalidToken: token };
-		}
-
-		if (!seenDates.has(token)) {
-			seenDates.add(token);
-			uniqueDates.push(token);
-		}
-	}
-
-	return { dates: uniqueDates, invalidToken: null };
 }
 
 function buildInitialForm(defaultDayISO, initialEvent) {
@@ -42,7 +18,7 @@ function buildInitialForm(defaultDayISO, initialEvent) {
 			dateISO: startParts.dayISO,
 			startTime: startParts.timeHHmm,
 			endTime: endParts.timeHHmm,
-			pastedDates: "",
+			extraDates: [],
 		};
 	}
 
@@ -52,7 +28,7 @@ function buildInitialForm(defaultDayISO, initialEvent) {
 		dateISO: defaultDayISO,
 		startTime: "09:00",
 		endTime: "10:00",
-		pastedDates: "",
+		extraDates: [],
 	};
 }
 
@@ -97,13 +73,10 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 
 		const sourceZone = getSourceZone(form.createdBy);
 		const normalizedTitle = form.createdBy === "appel" ? "Appel" : form.title.trim() || "Indisponible";
-		const pasted = parsePastedDates(form.pastedDates || "");
-		if (pasted.invalidToken) {
-			setError(`Date invalide: "${pasted.invalidToken}". Format attendu: YYYY-MM-DD.`);
-			return;
-		}
 
-		const targetDates = isEditMode ? [form.dateISO] : Array.from(new Set([form.dateISO, ...pasted.dates]));
+		const targetDates = isEditMode
+			? [form.dateISO]
+			: Array.from(new Set([form.dateISO, ...form.extraDates.filter((item) => typeof item === "string" && item)]));
 		if (targetDates.length === 0) {
 			setError("Ajoute au moins une date.");
 			return;
@@ -138,6 +111,24 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 		} catch (saveError) {
 			setError(saveError?.message || "Impossible d'enregistrer ce bloc.");
 		}
+	};
+
+	const handleAddExtraDate = () => {
+		setForm((current) => ({ ...current, extraDates: [...current.extraDates, current.dateISO] }));
+	};
+
+	const handleChangeExtraDate = (index, value) => {
+		setForm((current) => ({
+			...current,
+			extraDates: current.extraDates.map((item, itemIndex) => (itemIndex === index ? value : item)),
+		}));
+	};
+
+	const handleRemoveExtraDate = (index) => {
+		setForm((current) => ({
+			...current,
+			extraDates: current.extraDates.filter((_, itemIndex) => itemIndex !== index),
+		}));
 	};
 
 	const handleDelete = () => {
@@ -196,16 +187,22 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 						</label>
 					</div>
 					{!isEditMode ? (
-						<label>
-							Dates supplementaires (copier-coller)
-							<textarea
-								value={form.pastedDates}
-								onChange={(event) => setForm((current) => ({ ...current, pastedDates: event.target.value }))}
-								placeholder={"2026-06-02\n2026-06-09\n2026-06-16"}
-								rows={4}
-							/>
-							<small className="event-form__hint">Une date par ligne (ou separees par espace/virgule). Le meme bloc sera cree sur toutes ces dates.</small>
-						</label>
+						<div className="event-form__extra-dates">
+							<div className="event-form__extra-dates-header">
+								<strong>Dates supplementaires</strong>
+								<button type="button" className="secondary-btn" onClick={handleAddExtraDate}>
+									Ajouter une date
+								</button>
+							</div>
+							{form.extraDates.map((dateValue, index) => (
+								<div key={`extra-date-${index}`} className="event-form__extra-date-row">
+									<input type="date" value={dateValue} onChange={(event) => handleChangeExtraDate(index, event.target.value)} />
+									<button type="button" className="link-btn link-btn--danger" onClick={() => handleRemoveExtraDate(index)}>
+										Supprimer
+									</button>
+								</div>
+							))}
+						</div>
 					) : null}
 
 					{preview ? (
