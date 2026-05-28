@@ -762,13 +762,25 @@ body {
 }
 
 .event-form input,
-.event-form select {
+.event-form select,
+.event-form textarea {
 	border: 1px solid var(--border-soft);
 	border-radius: 10px;
 	padding: 9px 10px;
 	font: inherit;
 	color: inherit;
 	background: #fff;
+}
+
+.event-form textarea {
+	resize: vertical;
+	min-height: 88px;
+}
+
+.event-form__hint {
+	font-size: 0.78rem;
+	font-weight: 500;
+	color: var(--text-soft);
 }
 
 .event-form__split {

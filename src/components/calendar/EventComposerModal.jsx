@@ -2,8 +2,32 @@ import { useEffect, useMemo, useState } from "react";
 import { USERS } from "../../constants/timezones";
 import { formatRangeInZone, getDurationLabel, toLocalDateTimeParts, toUtcIsoFromLocal } from "../../utils/dateTime";
 
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 function getSourceZone(createdBy) {
 	return USERS[createdBy]?.zone || USERS.canada.zone;
+}
+
+function parsePastedDates(rawText) {
+	const tokens = rawText
+		.split(/[\s,;,]+/)
+		.map((token) => token.trim())
+		.filter(Boolean);
+	const uniqueDates = [];
+	const seenDates = new Set();
+
+	for (const token of tokens) {
+		if (!ISO_DATE_PATTERN.test(token)) {
+			return { dates: [], invalidToken: token };
+		}
+
+		if (!seenDates.has(token)) {
+			seenDates.add(token);
+			uniqueDates.push(token);
+		}
+	}
+
+	return { dates: uniqueDates, invalidToken: null };
 }
 
 function buildInitialForm(defaultDayISO, initialEvent) {
@@ -18,6 +42,7 @@ function buildInitialForm(defaultDayISO, initialEvent) {
 			dateISO: startParts.dayISO,
 			startTime: startParts.timeHHmm,
 			endTime: endParts.timeHHmm,
+			pastedDates: "",
 		};
 	}
 
@@ -27,6 +52,7 @@ function buildInitialForm(defaultDayISO, initialEvent) {
 		dateISO: defaultDayISO,
 		startTime: "09:00",
 		endTime: "10:00",
+		pastedDates: "",
 	};
 }
 
@@ -65,31 +91,53 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 		return null;
 	}
 
-	const handleSubmit = (event) => {
+	const handleSubmit = async (event) => {
 		event.preventDefault();
 		setError("");
 
 		const sourceZone = getSourceZone(form.createdBy);
-		const startUTC = toUtcIsoFromLocal(form.dateISO, form.startTime, sourceZone);
-		const endUTC = toUtcIsoFromLocal(form.dateISO, form.endTime, sourceZone);
-
-		if (!startUTC || !endUTC) {
-			setError("Entre une date et des heures valides.");
+		const normalizedTitle = form.createdBy === "appel" ? "Appel" : form.title.trim() || "Indisponible";
+		const pasted = parsePastedDates(form.pastedDates || "");
+		if (pasted.invalidToken) {
+			setError(`Date invalide: "${pasted.invalidToken}". Format attendu: YYYY-MM-DD.`);
 			return;
 		}
 
-		if (new Date(endUTC) <= new Date(startUTC)) {
-			setError("L'heure de fin doit etre apres le debut.");
+		const targetDates = isEditMode ? [form.dateISO] : Array.from(new Set([form.dateISO, ...pasted.dates]));
+		if (targetDates.length === 0) {
+			setError("Ajoute au moins une date.");
 			return;
 		}
 
-		onSave({
-			id: initialEvent?.id ?? crypto.randomUUID(),
-			title: form.createdBy === "appel" ? "Appel" : form.title.trim() || "Indisponible",
-			createdBy: form.createdBy,
-			startUTC,
-			endUTC,
-		});
+		const eventsToSave = [];
+		for (const dayISO of targetDates) {
+			const startUTC = toUtcIsoFromLocal(dayISO, form.startTime, sourceZone);
+			const endUTC = toUtcIsoFromLocal(dayISO, form.endTime, sourceZone);
+
+			if (!startUTC || !endUTC) {
+				setError(`Date/heure invalide pour ${dayISO}.`);
+				return;
+			}
+
+			if (new Date(endUTC) <= new Date(startUTC)) {
+				setError("L'heure de fin doit etre apres le debut.");
+				return;
+			}
+
+			eventsToSave.push({
+				id: initialEvent?.id ?? crypto.randomUUID(),
+				title: normalizedTitle,
+				createdBy: form.createdBy,
+				startUTC,
+				endUTC,
+			});
+		}
+
+		try {
+			await onSave(isEditMode ? eventsToSave[0] : eventsToSave);
+		} catch (saveError) {
+			setError(saveError?.message || "Impossible d'enregistrer ce bloc.");
+		}
 	};
 
 	const handleDelete = () => {
@@ -103,7 +151,7 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 	return (
 		<div className="modal-backdrop" onClick={onClose} role="presentation">
 			<div className="modal" onClick={(event) => event.stopPropagation()}>
-				<h2>{isEditMode ? "Modifier le bloc" : "Ajouter une indisponibilite"}</h2>
+				<h2>{isEditMode ? "Modifier le bloc" : "Ajouter une indisponibilité"}</h2>
 				<form onSubmit={handleSubmit} className="event-form">
 					<label>
 						Titre
@@ -147,6 +195,18 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 							<input type="time" value={form.endTime} onChange={(event) => setForm((current) => ({ ...current, endTime: event.target.value }))} />
 						</label>
 					</div>
+					{!isEditMode ? (
+						<label>
+							Dates supplementaires (copier-coller)
+							<textarea
+								value={form.pastedDates}
+								onChange={(event) => setForm((current) => ({ ...current, pastedDates: event.target.value }))}
+								placeholder={"2026-06-02\n2026-06-09\n2026-06-16"}
+								rows={4}
+							/>
+							<small className="event-form__hint">Une date par ligne (ou separees par espace/virgule). Le meme bloc sera cree sur toutes ces dates.</small>
+						</label>
+					) : null}
 
 					{preview ? (
 						<div className="event-preview">

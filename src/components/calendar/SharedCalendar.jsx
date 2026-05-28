@@ -425,40 +425,70 @@ export default function SharedCalendar({ user, onLogout }) {
 		setEditingEvent((current) => (current?.id === savedEvent.id ? savedEvent : current));
 	};
 
-	const handleSaveEvent = async (event) => {
-		const payload = {
-			title: event.title,
-			startUTC: event.startUTC,
-			endUTC: event.endUTC,
-			createdBy: event.createdBy,
-		};
-		const response = editingEvent?.id
-			? await apiFetch(`/api/events/${editingEvent.id}`, {
-					method: "PUT",
-					body: payload,
-				})
-			: await apiFetch("/api/events", {
-					method: "POST",
-					body: payload,
-				});
-		const savedEvent = response?.event;
-
-		if (!savedEvent) {
+	const handleSaveEvent = async (input) => {
+		const incomingEvents = Array.isArray(input) ? input : [input];
+		if (incomingEvents.length === 0) {
 			return;
 		}
 
+		let savedEvents = [];
+
+		if (editingEvent?.id) {
+			const event = incomingEvents[0];
+			const payload = {
+				title: event.title,
+				startUTC: event.startUTC,
+				endUTC: event.endUTC,
+				createdBy: event.createdBy,
+			};
+			const response = await apiFetch(`/api/events/${editingEvent.id}`, {
+				method: "PUT",
+				body: payload,
+			});
+			const savedEvent = response?.event;
+			if (!savedEvent) {
+				return;
+			}
+			savedEvents = [savedEvent];
+		} else {
+			for (const event of incomingEvents) {
+				const payload = {
+					title: event.title,
+					startUTC: event.startUTC,
+					endUTC: event.endUTC,
+					createdBy: event.createdBy,
+				};
+				const response = await apiFetch("/api/events", {
+					method: "POST",
+					body: payload,
+				});
+				if (response?.event) {
+					savedEvents.push(response.event);
+				}
+			}
+
+			if (savedEvents.length === 0) {
+				return;
+			}
+		}
+
 		setEvents((current) => {
-			const hasExistingEvent = current.some((item) => item.id === savedEvent.id);
-			const merged = hasExistingEvent ? current.map((item) => (item.id === savedEvent.id ? savedEvent : item)) : [...current, savedEvent];
+			let merged = [...current];
+
+			for (const savedEvent of savedEvents) {
+				const hasExistingEvent = merged.some((item) => item.id === savedEvent.id);
+				merged = hasExistingEvent ? merged.map((item) => (item.id === savedEvent.id ? savedEvent : item)) : [...merged, savedEvent];
+			}
 
 			return merged.sort((left, right) => left.startUTC.localeCompare(right.startUTC));
 		});
 
-		setActiveEvent(savedEvent);
+		const focusEvent = savedEvents[savedEvents.length - 1];
+		setActiveEvent(focusEvent);
 		setEditingEvent(null);
-		setSelectedDayISO(DateTime.fromISO(savedEvent.startUTC, { zone: "utc" }).setZone(PRIMARY_ZONE).toISODate());
+		setSelectedDayISO(DateTime.fromISO(focusEvent.startUTC, { zone: "utc" }).setZone(PRIMARY_ZONE).toISODate());
 		setMonthCursor((current) => {
-			const eventMonth = DateTime.fromISO(savedEvent.startUTC, { zone: "utc" }).setZone(PRIMARY_ZONE).startOf("month");
+			const eventMonth = DateTime.fromISO(focusEvent.startUTC, { zone: "utc" }).setZone(PRIMARY_ZONE).startOf("month");
 			return current.hasSame(eventMonth, "month") ? current : eventMonth;
 		});
 		setIsComposerOpen(false);
