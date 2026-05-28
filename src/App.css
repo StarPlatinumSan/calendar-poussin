@@ -733,14 +733,25 @@ body {
 	place-items: center;
 	padding: 16px;
 	z-index: 30;
+	overscroll-behavior: contain;
 }
 
 .modal {
 	width: min(560px, 100%);
+	max-height: calc(100dvh - 32px);
 	background: #fff;
 	border: 1px solid var(--border-soft);
 	border-radius: 20px;
 	padding: 20px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+}
+
+body.modal-open {
+	overflow: hidden;
+	touch-action: none;
+	overscroll-behavior: none;
 }
 
 .modal h2 {

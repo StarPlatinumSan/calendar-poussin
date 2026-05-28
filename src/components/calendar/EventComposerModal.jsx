@@ -44,6 +44,23 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 		}
 	}, [open, defaultDayISO, initialEvent]);
 
+	useEffect(() => {
+		if (typeof document === "undefined") {
+			return undefined;
+		}
+
+		if (!open) {
+			document.body.classList.remove("modal-open");
+			return undefined;
+		}
+
+		document.body.classList.add("modal-open");
+
+		return () => {
+			document.body.classList.remove("modal-open");
+		};
+	}, [open]);
+
 	const preview = useMemo(() => {
 		if (!open) {
 			return null;
@@ -74,9 +91,7 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 		const sourceZone = getSourceZone(form.createdBy);
 		const normalizedTitle = form.createdBy === "appel" ? "Appel" : form.title.trim() || "Indisponible";
 
-		const targetDates = isEditMode
-			? [form.dateISO]
-			: Array.from(new Set([form.dateISO, ...form.extraDates.filter((item) => typeof item === "string" && item)]));
+		const targetDates = isEditMode ? [form.dateISO] : Array.from(new Set([form.dateISO, ...form.extraDates.filter((item) => typeof item === "string" && item)]));
 		if (targetDates.length === 0) {
 			setError("Ajoute au moins une date.");
 			return;
@@ -93,7 +108,7 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 			}
 
 			if (new Date(endUTC) <= new Date(startUTC)) {
-				setError("L'heure de fin doit etre apres le debut.");
+				setError("L'heure de fin doit être après le début.");
 				return;
 			}
 
@@ -189,9 +204,9 @@ export default function EventComposerModal({ open, defaultDayISO, initialEvent, 
 					{!isEditMode ? (
 						<div className="event-form__extra-dates">
 							<div className="event-form__extra-dates-header">
-								<strong>Dates supplementaires</strong>
+								<strong>Autres dates</strong>
 								<button type="button" className="secondary-btn" onClick={handleAddExtraDate}>
-									Ajouter une date
+									Ajouter date
 								</button>
 							</div>
 							{form.extraDates.map((dateValue, index) => (
